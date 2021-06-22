@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Object perception</title>
+
+    <!-- CSS from lab.js -->
+    <link rel="stylesheet" type="text/css" href="labjs/lab.css" />
+
+    <!--  Experiment  -->
+    <script src="jatos.js"></script>
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    
+
+</head>
+
+<body>
+    <div id="container" class="container fullscreen">
+        <div style="display: flex; flex-direction: column; justify-content: center; align-content: center; height: 100%;">
+            <!-- <img src="./labjs/loading.svg" alt=""> -->
+            <img src="./attachments/loading.gif" alt="" style="height: 200px; width: 200px; align-self: center;">
+            <p style="display: inline-block; order: 2; font-size: 100%; text-align: center; align-self: center;">Loading resources...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { StimulusDisplay } from './js/task_dragAndDrop.js';
+        import { Display } from './js/display.js';
+        import { getVect } from './js/utils.js';
+        import { abortBox } from './js/jatos_utils.js';
+        import { catchStims } from './js/load_stims.js';
+        import { JSON2CSV, getPics2NodesObj } from './js/utils.js';
+        import { getVisibilityAPI, handleVisibilityChange, suppressGoBack } from './js/utils.js';
+
+        let prolificID;
+        let studyID;
+
+        jatos.onLoad(function() {
+            loading()           
+        }); 
+
+        async function loading() {
+            let {hidden, visibilityChange} = getVisibilityAPI();
+            if (typeof document.addEventListener === "undefined" || hidden === undefined) {
+                jatos.appendResultData('the Page Visibility API not supported\n')
+            } else {
+                document.addEventListener(visibilityChange, () => {handleVisibilityChange(hidden)}, false);
+            }
+            suppressGoBack();
+            
+            prolificID = jatos.studySessionData.prolificID;
+            studyID = jatos.studySessionData.studyID;
+            if (typeof prolificID === 'undefined') {
+                // if coming from redirect
+                prolificID = jatos.urlQueryParameters.PROLIFIC_PID;
+                studyID = jatos.urlQueryParameters.STUDY_PID;
+                // DEBUGGING MODE
+                if (typeof prolificID === 'undefined') {
+                    prolificID = '00000'; studyID = '01';
+                }
+            }
+
+            let dat = jatos.batchSession.find(`/${prolificID}/dat`);
+
+            if (typeof dat === 'undefined' & prolificID === '00000') {
+                dat = {};
+                dat.id = 0;
+                dat.randVect = shuffle(getVect(50));
+                dat.randN = 0; 
+                dat.what2press = 1;
+                dat.componentsPositions = [1, 2, 3, 4, 5, 6, 7];
+            }
+
+            let randPics2NodesSet = jatos.studyJsonInput;
+            let pics2nodesObj = getPics2NodesObj(randPics2NodesSet[dat.id]);
+            let pics2nodes = pics2nodesObj[parseInt(studyID)];
+
+            dat.randN = dat.randN + 1;
+            if (dat.randN > dat.randVect.length) {dat.randN = 0};
+
+            dat.currentBlock = 'NA';
+            dat.currentComponentPos = jatos.componentPos;
+            dat.currentComponentID = jatos.componentId;
+            dat.currentResultID = jatos.studyResultId;
+
+            // REPLACE BATCH
+            await replace(prolificID, dat).catch(reloadpage);
+
+            // LOAD STUFF
+            let stims = await catchStims(pics2nodes);
+            if (stims === false) {
+                jatos.appendResultData('Problem loading resources\n');
+                document.body.innerHTML = `
+                <div style="text-align:center">
+                <p>
+                    Problem loading resources. Please reload the page.
+                </p>
+                </div>
+                `;
+            }
+            
+            let content = `` +
+            `<div>
+            <p>
+                In the task you just completed the images were presented after one another according to a rule.<br>
+                This means that images did not appear randomly one after another, but it was more likely for some images to appear after certain others.<br>
+                For example, the rule could be that a shirt typically appears after an umbrella, but never after a bicycle.<br>
+                
+                Based on your memory, impression or intuition, try to reconstruct this underlying rule by considering which images could appear after one another.<br>
+                To this end, arrange the objects in a grey area on the screen in a way that reflects your understanding of the underlying rule.<br>
+                For example, if you think that some objects could "go together" (or form a group) because they tend to occur after one another, <br>
+                then they should be located close to each other in the grey area. <br>
+                Likewise, if you think some images do not "go together" because they never tend to occur after one another,<br>
+                they should be located far away from one another.<br>
+                If there are any images that do not seem to belong to any of the groups,<br>
+                place them in the middle of the screen and away from the other groups you formed.<br><br>
+
+                Use the mouse to drag an image and drop it in the place of your choice.  <br>
+                Use the entire grey area to arrange the objects.  <br>
+                You can arrange objects only inside the grey area.  <br>
+                You are free to explore different arrangments as much as you want -- there will be a reset button if you want to clean the screen.<br>
+                Confirm your final choice with a submit button.<br>
+            </p>
+            </div>`;
+
+
+            let display = new Display;
+            display.setTitle(`Arrange objects in the grey area`);
+            display.insertButtons('Start', 'Quit');
+            display.setInstructions(content);
+            display._main.style.fontSize = '2vh';
+            let d = new Date().getTime();
+            jatos.appendResultData(`Onset, instructions, arena, ${prolificID}, ${d}\n`);
+
+            display.start_button.addEventListener('click', ()=>{start(pics2nodes, stims, dat)});
+            display.quit_button.addEventListener('click', ()=>{abortBox(prolificID)});
+            
+            async function replace(prolificID, dat) {
+                if (typeof jatos.batchSession.find(`/${prolificID}`) === 'undefined') {
+                    await jatos.batchSession.add(`/${prolificID}`, {dat: dat})
+                } else {
+                    await jatos.batchSession.replace(`/${prolificID}/dat`, dat);
+                }
+            }
+
+
+            function start(pics2nodes, stims, dat) {
+                runTask(pics2nodes, stims, dat)
+                .then( (results) => {
+                    jatos.uploadResultFile(JSON2CSV(JSON.stringify(results.results.results)), `${prolificID}_arena.csv`)
+                    jatos.uploadResultFile(JSON2CSV(JSON.stringify(results.results.coords)), `${prolificID}_arena_coords.csv`)
+                    // jatos.uploadResultFile(JSON2CSV(JSON.stringify(results.results_graph2.results)), `${prolificID}_day03_block${currentBlock}_graph02.csv`)
+                    // jatos.uploadResultFile(JSON2CSV(JSON.stringify(results.results_graph2.coords)), `${prolificID}_day03_block${currentBlock}_graph02_coords.csv`)
+                    jatos.uploadResultFile(JSON.stringify(results.feedbackresults), `${prolificID}_arena_explanation.json`)
+                })
+                .then( () => {jatos.startNextComponent()})
+            }
+            function reloadpage() {
+                display.setInstructions('Please reload the page');
+            }
+        }
+
+        async function runTask(pics2nodes, stims) {
+            
+            let d = new Date().getTime();
+            jatos.appendResultData(`Offset, instructions, arena, ${prolificID}, ${d}\n`);
+            jatos.appendResultData(`Onset, task, arena, ${prolificID}, ${d}\n`);
+            let results = await drag(stims, 1);
+            // await interval(); // interval of 1 s
+            // let results_graph2 = await drag(stims, 2);
+            d = new Date().getTime();
+            jatos.appendResultData(`offset, task, arena, ${prolificID}, ${d}\n`);
+            let feedbackresults = await feedback();
+            return {results, feedbackresults};
+
+            function feedback() {
+                return new Promise( (resolve) => {
+                    let display = new Display;
+                    display.clearMain();
+                    display.clearFooter();
+                    display.insertButtons('Submit', 'Quit');
+                    let content = `` +
+                    `<p>  
+                    <form id="feedbackForm">
+                        <b>Please let us know why you arranged the objects this way.</b><br>
+                            Is there any particular reason?<br>
+                            Did you try to figure out a pattern of how the images are arranged and aimed to show it?
+                            If so, what was your strategy?<br>
+                            If not, what would help you or what prevented you from realising that there was a pattern?<br>
+                            Please help us to understand how you solved this task.<br>
+                        <div style="display: flex; justify-content: center">
+                        <textarea placeholder="Please write your explanation here..." rows = "5" cols = "100" name = "description"></textarea>
+                        </div>
+                    </form>
+                    </p>`;
+                    display.setInstructions(content);
+
+                    display.start_button.addEventListener('click', submit);
+                    display.quit_button.addEventListener('click', ()=>{abortBox(prolificID)});
+                    function submit() {
+                        let formData = new FormData(document.getElementById("feedbackForm"));
+                        let results = {
+                            feedback: formData.get('description'),
+                        }
+                        if (results.feedback === "") {
+                        alert('Please help us to understand how you solved this task');
+                        } else {
+                            resolve(results.feedback);
+                        }
+                    }
+                })
+            }
+            function interval() {
+                return new Promise( (resolve) => {
+                    let display = new Display;
+                    display.clearMain();
+                    display.showFixation();
+                    setTimeout(()=> {resolve()}, 1000);
+                })
+            }
+            function drag(stims) {
+                return new Promise( (resolve) => {
+                    
+                    let results = [];
+                    results[0] = ['img', 'node', 'graph', 'x', 'y'];
+                    let display = new StimulusDisplay(stims);
+                    display.quit_button.addEventListener('click', ()=>{abortBox(prolificID)});
+                    display.submit_button.addEventListener('click', submit);
+                    display.reset_button.addEventListener('click', reset);
+
+                    // let pics = pics2nodesObj[graph];
+                    let pics = pics2nodes;
+
+                    let initPositions = [];
+                    for (let i=1; i<pics.length; i++) {
+                        $( `#img-${pics[i]}` ).draggable({containment: '#main'});
+                    }
+
+                    setTimeout(getInitPos, 500);
+
+                    function getInitPos() {
+                        for (let i=1; i<pics.length; i++) {
+                            let x = $(`#img-${pics[i]}`).offset().left;
+                            let y = $(`#img-${pics[i]}`).offset().top;
+                            initPositions[i] = [x, y];
+                        }
+                    }
+
+                    function checkLocation() {
+                        let pos = 1;
+                        for (let i=1; i<pics.length; i++) {
+                            let x = $(`#img-${pics[i]}`).offset().left;
+                            let y = $(`#img-${pics[i]}`).offset().top;
+                            let l = $(`#img-${pics[i]}`).height();
+                            if ((x > $(`#arena`).offset().left && x+l < $(`#arena`).offset().left+$(`#arena`).width()) && 
+                                (y > $(`#arena`).offset().top && y+l < $(`#arena`).offset().top+$(`#arena`).height())) {                                
+                                continue;
+                            } else {
+                                pos += 1;
+                            }
+                        }
+                        return pos;
+                    }
+
+                    function reset() {
+                        for (let i=1; i<pics.length; i++) {
+                            $(`#img-${pics[i]}`).offset({top: initPositions[i][1], left: initPositions[i][0]});
+                        }
+                    }
+
+                    function submit() {
+                        let isok = checkLocation();
+                        if (isok !== 1) {
+                            alert('Please make sure that all objects are inside the grey area');
+                        } else if (isok === 1) {
+                            for (let i=1; i<pics.length; i++) {
+                                let x = $(`#img-${pics[i]}`).offset().left;
+                                let y = $(`#img-${pics[i]}`).offset().top;
+                                // let node = pics2nodesObj[graph].indexOf(pics[i]);
+                                let node = pics2nodes.indexOf(pics[i]);
+                                // let graphid = graph;
+                                let graphid = 1;
+                                results.push([pics[i], node, graphid, x, y]);
+                            }
+                            let coords = [];
+                            coords[0] = ['top', 'left', 'width', 'height'];
+                            coords[1] = [$(`#arena`).offset().top, $(`#arena`).offset().left, $(`#arena`).width(), $(`#arena`).height()];
+                            resolve({results, coords});
+                        }
+                    } 
+                });
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>

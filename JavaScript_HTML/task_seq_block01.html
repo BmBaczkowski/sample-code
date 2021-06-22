@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Object perception</title>
+
+    <!-- CSS from lab.js -->
+    <link rel="stylesheet" type="text/css" href="labjs/lab.css" />
+
+    <!--  Experiment  -->
+    <script src="jatos.js"></script>
+    
+
+</head>
+
+<body>
+    <div id="container" class="container fullscreen">
+        <div style="display: flex; flex-direction: column; justify-content: center; align-content: center; height: 100%;">
+            <!-- <img src="./labjs/loading.svg" alt=""> -->
+            <img src="./attachments/loading.gif" alt="" style="height: 200px; width: 200px; align-self: center;">
+            <p style="display: inline-block; order: 2; font-size: 100%; text-align: center; align-self: center;">Loading resources...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Display } from './js/display.js';
+        import { catchStims, catchFeedback } from './js/load_stims.js';
+        import { getVisibilityAPI, handleVisibilityChange, suppressGoBack, getPics2NodesObj } from './js/utils.js';
+        import { getVect, shuffle, JSON2CSV } from './js/utils.js';
+        import { timeline, StimulusDisplay } from './js/task_seq.js';
+        import { abortBox } from './js/jatos_utils.js';
+
+        // Change this to false if you do not debug the code
+        // otherwise always only first 4 trials are played
+        let testing = false;
+
+        let prolificID;
+        let studyID;
+
+        jatos.onLoad(function() {
+            loading();           
+        }); 
+
+        async function loading() {
+            let {hidden, visibilityChange} = getVisibilityAPI();
+            if (typeof document.addEventListener === "undefined" || hidden === undefined) {
+                jatos.appendResultData('the Page Visibility API not supported\n')
+            } else {
+                document.addEventListener(visibilityChange, () => {handleVisibilityChange(hidden)}, false);
+            }
+            suppressGoBack();
+
+            prolificID = jatos.studySessionData.prolificID;
+            studyID = jatos.studySessionData.studyID;
+            if (typeof prolificID === 'undefined') {
+                // if coming from redirect
+                prolificID = jatos.urlQueryParameters.PROLIFIC_PID;
+                studyID = jatos.urlQueryParameters.STUDY_PID;
+                // DEBUGGING MODE
+                if (typeof prolificID === 'undefined') {
+                    prolificID = '00000'; studyID = '01';
+                }
+            }
+
+            let dat = jatos.batchSession.find(`/${prolificID}/dat`);
+
+            if (typeof dat === 'undefined' & prolificID === '00000') {
+                dat = {};
+                dat.id = 0;
+                dat.randVect = shuffle(getVect(50));
+                dat.randN = 0; 
+                dat.what2press = 1;
+                dat.componentsPositions = [1, 2, 3, 4, 5, 6, 7];
+            }
+
+            let randPics2NodesSet = jatos.studyJsonInput;
+            let pics2nodesObj = getPics2NodesObj(randPics2NodesSet[dat.id]);
+            let pics2nodes = pics2nodesObj[parseInt(studyID)];
+
+            dat.randN = dat.randN + 1;
+            if (dat.randN > dat.randVect.length) {dat.randN = 0};
+
+            // buttons
+            let what2pressObj = {
+                1: {
+                    instr: ['normal', 'mirrored'],
+                    code: ['KeyF', 'KeyJ'],
+                },
+                2: {
+                    instr: ['mirrored', 'normal'],
+                    code: ['KeyJ', 'KeyF'],
+                } 
+            }
+            
+            let keypressInst = what2pressObj[dat.what2press].instr;
+            let keypressCode = what2pressObj[dat.what2press].code;
+
+            dat.currentBlock = 1;
+            dat.currentBlock = '0' + dat.currentBlock.toString();
+            dat.currentComponentPos = jatos.componentPos;
+            dat.currentComponentID = jatos.componentId;
+            dat.currentResultID = jatos.studyResultId;
+
+            // REPLACE BATCH
+            await replace(prolificID, dat).catch(reloadpage);
+
+            // LOAD STUFF            
+            let stims = await catchStims(pics2nodes);
+            let feedback = await catchFeedback();
+            let randSets = await getRandTrials();
+            
+            if (stims === false || feedback === false || randSets === false) {
+                jatos.appendResultData('Problem loading resources\n');
+                document.body.innerHTML = `
+                <div style="text-align:center">
+                <p>
+                    Problem loading resources. Please reload the page.
+                </p>
+                </div>
+                `;
+            }
+
+            // RUN TASK
+            let results = await runTask(prolificID, pics2nodes, studyID, randSets, dat, stims, feedback, keypressInst);
+            // UPLOAD RESULTS
+            await upload(results, prolificID, dat.currentBlock);
+            // BREAK
+            // await teatime(prolificID, dat.currentBlock);
+            // GO TO THE NEXT COMPONENT
+            await nextComponent(prolificID, dat);
+        }
+
+        async function replace(prolificID, dat) {
+            if (typeof jatos.batchSession.find(`/${prolificID}`) === 'undefined') {
+                await jatos.batchSession.add(`/${prolificID}`, {dat: dat})
+            } else {
+                await jatos.batchSession.replace(`/${prolificID}/dat`, dat);
+            }
+        }
+
+        async function runTask(prolificID, pics2nodes, studyID, randSets, dat, stims, feedback, keypressInst) {
+            
+            let trials = randSets[dat.randN].dmat;
+
+            if (testing) {
+                trials = trials.slice(0,4);
+            }
+
+            let display = new StimulusDisplay(dat.currentBlock, stims, feedback, keypressInst);
+            display.quit_button.addEventListener('click', ()=>{abortBox(prolificID)});
+            let d = new Date().getTime();
+            jatos.appendResultData(`Onset, task, seq, ${dat.currentBlock}, ${prolificID}, ${d}\n`);
+            let results = await timeline(display, trials, pics2nodes, studyID, keypressInst);
+            return results;
+            
+        }
+
+        async function upload(results, prolificID, currentBlock) {
+            
+            await jatos.uploadResultFile(JSON2CSV(JSON.stringify(results)), `${prolificID}_block${currentBlock}.csv`, 
+                                    () => {jatos.appendResultData('Result file upload successful\n')}, 
+                                    () => {
+                                        jatos.uploadResultFile(JSON2CSV(JSON.stringify(results)), `${prolificID}_block${currentBlock}.csv`);
+                                        jatos.appendResultData('Result file upload unsuccessful. Upload repeated\n');
+                                        })
+            
+        }
+
+        function teatime(prolificID, currentBlock) {
+            return new Promise( (resolve) => {          
+                let display = new Display;
+                display.clearContainer();
+                display.setTitle(`What's the orientation?<br> (Part ${currentBlock}/11)`);
+                display.setInstructions('BREAK');
+                display._main.style.fontSize = '5vh';
+                display.insertButtons('Continue');
+                display.start_button.addEventListener('click', ()=>{resolve()});
+                display.quit_button.addEventListener('click', ()=>{abortBox(prolificID)});
+            });
+        }
+
+        async function nextComponent(prolificID, dat) {
+            let d = new Date().getTime();
+            await jatos.appendResultData(`Offset, task, seq, ${dat.currentBlock}, ${prolificID}, ${d}\n`)
+                .then( () => {jatos.startComponentByPos(dat.componentsPositions[dat.currentComponentPos]);})
+        }
+
+        async function getRandTrials() {
+            let data = false;
+            let str = `./matlabscripts/rand_walk.json`;
+            let response = await fetch(str);
+            if (response.ok === false) {
+                return false;
+            }
+            data = await response.json();
+            return data;
+        }
+
+        function reloadpage() {
+            let display = new Display;
+            display.setInstructions('Please reload the page');
+        }
+
+    </script>
+</body>
+
+</html>
