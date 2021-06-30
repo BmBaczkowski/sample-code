@@ -44,25 +44,18 @@ probability distribution. In particular, it does not integrate to 1.
 known and fixed, and the parameter, θ, uncertain and variable. Therefore, p(y|θ) is usually called the likelihood function for θ.
 
 If we denote the number of heads as $z = \sum_i{y_i}$ and the number of tails as $N−z= \sum_i{(1-y_i)}$, then:
-$$
-\tag{by assumption of independence}
-p(y_i|\theta) = \prod{p(y_i|\theta)}
-$$
 
-$$
-\tag{from the first equation}
-p(y_i|\theta) = \prod{\theta^{y_1}(1-\theta)^{(1-y_i)}}
-$$
+$\tag{by assumption of independence}
+p(y_i|\theta) = \prod{p(y_i|\theta)}$
 
-$$
-\tag{by algebra}
-p(y_i|\theta) = \theta^{\sum_i{y_i}}(1-\theta)^{\sum_i{(1-y_i)}}
-$$
+$\tag{from the first equation}
+p(y_i|\theta) = \prod{\theta^{y_1}(1-\theta)^{(1-y_i)}}$
 
-$$
-\tag{6.2}
-p(y_i|\theta) = \theta^z(1-\theta)^{N-z}
-$$
+$\tag{by algebra}
+p(y_i|\theta) = \theta^{\sum_i{y_i}}(1-\theta)^{\sum_i{(1-y_i)}}$
+
+$\tag{6.2}
+p(y_i|\theta) = \theta^z(1-\theta)^{N-z}$
 
 ## Prior (description of credibilities): the beta distribution
 
@@ -75,14 +68,11 @@ $$
 > Second, we desire the denominator of Bayes’ rule (Equation 5.9, p. 107), namely $\int d\theta \;p(y|\theta)p(\theta)$, to be solvable analytically. This quality also depends on how the form of the function p(θ) relates to the form of the function p(y|θ). When the forms of p(y|θ) and p(θ) combine so that the posterior distribution has the same form as the prior distribution, then p(θ) is called a conjugate prior for p(y|θ). Notice that the prior is conjugate only with respect to a particular likelihood function.
 
 Beta distribution $beta(\theta|a, b)$ (in R: dbeta(theta,a,b)):
-$$
-p(\theta|a, b) = beta(\theta|a, b) = \theta^{(a−1)} \; (1 − \theta)^{(b−1)} / B(a, b)
-$$
+$p(\theta|a, b) = beta(\theta|a, b) = \theta^{(a−1)} \; (1 − \theta)^{(b−1)} / B(a, b)$
 
 Beta function $B(a,b)$ (in R: beta(a,b)):
-$$
-B(a,b) = \int_{0}^{1} d\theta \; \theta^{(a-1)} \; (1-\theta)^{(b-1)}
-$$
+$B(a,b) = \int_{0}^{1} d\theta \; \theta^{(a-1)} \; (1-\theta)^{(b-1)}$
+
 "The beta function is not a function of θ because θ has been “integrated out,” the function only involves the variables a and b."
 
 Simple R script to compute numerical integrals:
@@ -99,35 +89,23 @@ b2 <- beta(4,4)
 
 ## Posterior beta
 
-$$
-\tag{Bayes' rule}
-p(\theta | z,N) = p(z,N|\theta)p(\theta) / p(z,N)
-$$
+$\tag{Bayes' rule}
+p(\theta | z,N) = p(z,N|\theta)p(\theta) / p(z,N)$
 
-$$
-\tag{by definitions of Bernoulli and beta distributions}
-p(\theta | z,N) = \theta^z(1-\theta)^{(N-z)} \; \frac{\theta^{a-1}(1-\theta)^{(b-1)}}{B(a,b)} \; / p(z,N)
-$$
+$\tag{by definitions of Bernoulli and beta distributions}
+p(\theta | z,N) = \theta^z(1-\theta)^{(N-z)} \; \frac{\theta^{a-1}(1-\theta)^{(b-1)}}{B(a,b)} \; / p(z,N)$
 
-$$
-\tag{by re-arranging factors}
-p(\theta | z,N) = \theta^z(1-\theta)^{(N-z)} \; \theta^{a-1}(1-\theta)^{(b-1)} \; / [B(a,b)p(z,N)]
-$$
+$\tag{by re-arranging factors}
+p(\theta | z,N) = \theta^z(1-\theta)^{(N-z)} \; \theta^{a-1}(1-\theta)^{(b-1)} \; / [B(a,b)p(z,N)]$
 
-$$
-\tag{by collecting powers}
-p(\theta | z,N) = \theta^{((z+a)-1)}(1-\theta)^{((N-z+b)-1)}\; / [B(a,b)p(z,N)]
-$$
+$\tag{by collecting powers}
+p(\theta | z,N) = \theta^{((z+a)-1)}(1-\theta)^{((N-z+b)-1)}\; / [B(a,b)p(z,N)]$
 
-$$
-\tag{equation}
-p(\theta | z,N) = \theta^{((z+a)-1)}(1-\theta)^{((N-z+b)-1)}\; / B(z+a, N-z+b)
-$$
+$\tag{equation}
+p(\theta | z,N) = \theta^{((z+a)-1)}(1-\theta)^{((N-z+b)-1)}\; / B(z+a, N-z+b)$
 
 If the prior distribution is beta(θ|a, b), and the data have z heads in N flips, then the posterior distribution is:
-$$
-beta(\theta|z+a, N-z+b)
-$$
+$beta(\theta|z+a, N-z+b)$
 
 ## Example 6.4.2
 

@@ -54,25 +54,14 @@ interpreted as the underlying probability of heads for the coin flip.
 If we denote the number of heads as
 *z* = ∑<sub>*i*</sub>*y*<sub>*i*</sub> and the number of tails as
 *N* − *z* = ∑<sub>*i*</sub>(1 − *y*<sub>*i*</sub>), then:
-$$
-\\tag{by assumption of independence}
-p(y\_i|\\theta) = \\prod{p(y\_i|\\theta)}
-$$
 
-$$
-\\tag{from the first equation}
-p(y\_i|\\theta) = \\prod{\\theta^{y\_1}(1-\\theta)^{(1-y\_i)}}
-$$
+$\\tag{by assumption of independence} p(y\_i|\\theta) = \\prod{p(y\_i|\\theta)}$
 
-$$
-\\tag{by algebra}
-p(y\_i|\\theta) = \\theta^{\\sum\_i{y\_i}}(1-\\theta)^{\\sum\_i{(1-y\_i)}}
-$$
+$\\tag{from the first equation} p(y\_i|\\theta) = \\prod{\\theta^{y\_1}(1-\\theta)^{(1-y\_i)}}$
 
-$$
-\\tag{6.2}
-p(y\_i|\\theta) = \\theta^z(1-\\theta)^{N-z}
-$$
+$\\tag{by algebra} p(y\_i|\\theta) = \\theta^{\\sum\_i{y\_i}}(1-\\theta)^{\\sum\_i{(1-y\_i)}}$
+
+$\\tag{6.2} p(y\_i|\\theta) = \\theta^z(1-\\theta)^{N-z}$
 
 ## Prior (description of credibilities): the beta distribution
 
@@ -107,6 +96,7 @@ Beta distribution *b**e**t**a*(*θ*|*a*, *b*) (in R: dbeta(theta,a,b)):
 
 Beta function *B*(*a*, *b*) (in R: beta(a,b)):
 *B*(*a*, *b*) = ∫<sub>0</sub><sup>1</sup>*d**θ* *θ*<sup>(*a* − 1)</sup> (1 − *θ*)<sup>(*b* − 1)</sup>
+
 “The beta function is not a function of θ because θ has been “integrated
 out,” the function only involves the variables a and b."
 
@@ -135,30 +125,15 @@ Simple R script to compute numerical integrals:
 
 ## Posterior beta
 
-$$
-\\tag{Bayes' rule}
-p(\\theta | z,N) = p(z,N|\\theta)p(\\theta) / p(z,N)
-$$
+$\\tag{Bayes' rule} p(\\theta | z,N) = p(z,N|\\theta)p(\\theta) / p(z,N)$
 
-$$
-\\tag{by definitions of Bernoulli and beta distributions}
-p(\\theta | z,N) = \\theta^z(1-\\theta)^{(N-z)} \\; \\frac{\\theta^{a-1}(1-\\theta)^{(b-1)}}{B(a,b)} \\; / p(z,N)
-$$
+$\\tag{by definitions of Bernoulli and beta distributions} p(\\theta | z,N) = \\theta^z(1-\\theta)^{(N-z)} \\; \\frac{\\theta^{a-1}(1-\\theta)^{(b-1)}}{B(a,b)} \\; / p(z,N)$
 
-$$
-\\tag{by re-arranging factors}
-p(\\theta | z,N) = \\theta^z(1-\\theta)^{(N-z)} \\; \\theta^{a-1}(1-\\theta)^{(b-1)} \\; / \[B(a,b)p(z,N)\]
-$$
+$\\tag{by re-arranging factors} p(\\theta | z,N) = \\theta^z(1-\\theta)^{(N-z)} \\; \\theta^{a-1}(1-\\theta)^{(b-1)} \\; / \[B(a,b)p(z,N)\]$
 
-$$
-\\tag{by collecting powers}
-p(\\theta | z,N) = \\theta^{((z+a)-1)}(1-\\theta)^{((N-z+b)-1)}\\; / \[B(a,b)p(z,N)\]
-$$
+$\\tag{by collecting powers} p(\\theta | z,N) = \\theta^{((z+a)-1)}(1-\\theta)^{((N-z+b)-1)}\\; / \[B(a,b)p(z,N)\]$
 
-$$
-\\tag{equation}
-p(\\theta | z,N) = \\theta^{((z+a)-1)}(1-\\theta)^{((N-z+b)-1)}\\; / B(z+a, N-z+b)
-$$
+$\\tag{equation} p(\\theta | z,N) = \\theta^{((z+a)-1)}(1-\\theta)^{((N-z+b)-1)}\\; / B(z+a, N-z+b)$
 
 If the prior distribution is beta(θ|a, b), and the data have z heads in
 N flips, then the posterior distribution is:
