@@ -1,0 +1,1 @@
+Learning basic parameter estimation techniques and bootstrapping confidence interval in the context of a simple linear regression. 
