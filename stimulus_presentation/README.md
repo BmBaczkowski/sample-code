@@ -1,0 +1,2 @@
+Snippets of code used to present stimuli in a timed manner powered by [PsychToolbox](http://psychtoolbox.org/). 
+The code contains simple classical conditioning experiment integrated with Eyelink toolbox. 
