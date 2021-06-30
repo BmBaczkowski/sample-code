@@ -48,14 +48,17 @@ $$
 \tag{by assumption of independence}
 p(y_i|\theta) = \prod{p(y_i|\theta)}
 $$
+
 $$
 \tag{from the first equation}
 p(y_i|\theta) = \prod{\theta^{y_1}(1-\theta)^{(1-y_i)}}
 $$
+
 $$
 \tag{by algebra}
 p(y_i|\theta) = \theta^{\sum_i{y_i}}(1-\theta)^{\sum_i{(1-y_i)}}
 $$
+
 $$
 \tag{6.2}
 p(y_i|\theta) = \theta^z(1-\theta)^{N-z}
@@ -75,6 +78,7 @@ Beta distribution $beta(\theta|a, b)$ (in R: dbeta(theta,a,b)):
 $$
 p(\theta|a, b) = beta(\theta|a, b) = \theta^{(a−1)} \; (1 − \theta)^{(b−1)} / B(a, b)
 $$
+
 Beta function $B(a,b)$ (in R: beta(a,b)):
 $$
 B(a,b) = \int_{0}^{1} d\theta \; \theta^{(a-1)} \; (1-\theta)^{(b-1)}
@@ -99,6 +103,7 @@ $$
 \tag{Bayes' rule}
 p(\theta | z,N) = p(z,N|\theta)p(\theta) / p(z,N)
 $$
+
 $$
 \tag{by definitions of Bernoulli and beta distributions}
 p(\theta | z,N) = \theta^z(1-\theta)^{(N-z)} \; \frac{\theta^{a-1}(1-\theta)^{(b-1)}}{B(a,b)} \; / p(z,N)
@@ -108,14 +113,17 @@ $$
 \tag{by re-arranging factors}
 p(\theta | z,N) = \theta^z(1-\theta)^{(N-z)} \; \theta^{a-1}(1-\theta)^{(b-1)} \; / [B(a,b)p(z,N)]
 $$
+
 $$
 \tag{by collecting powers}
 p(\theta | z,N) = \theta^{((z+a)-1)}(1-\theta)^{((N-z+b)-1)}\; / [B(a,b)p(z,N)]
 $$
+
 $$
 \tag{equation}
 p(\theta | z,N) = \theta^{((z+a)-1)}(1-\theta)^{((N-z+b)-1)}\; / B(z+a, N-z+b)
 $$
+
 If the prior distribution is beta(θ|a, b), and the data have z heads in N flips, then the posterior distribution is:
 $$
 beta(\theta|z+a, N-z+b)
