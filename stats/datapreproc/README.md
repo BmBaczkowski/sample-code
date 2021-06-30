@@ -1,0 +1,1 @@
+Collection of code snippets in **R**, **matlab**, **python**, and **bash** used to manipulate data before statistical analysis. 
